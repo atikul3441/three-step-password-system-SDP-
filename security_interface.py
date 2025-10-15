@@ -2,11 +2,11 @@ import getpass
 import random
 
 
-def step1_login():
+def stm_login():
     correct_username = "admin"
-    correct_password = "password123"
+    correct_password = "123"
 
-    print("Step 1: Login")
+    print("Login")
     username = input("Username: ")
     password = getpass.getpass("Password: ")  # Hides input
 
@@ -17,9 +17,8 @@ def step1_login():
         print("Login failed.\n")
         return False
 
-
-def step2_security_question():
-    print("Step 2: Security Question")
+def stm_security_question():
+    print("Security Question")
     answer = input("What is your favorite color? ").strip().lower()
 
     if answer == "blue":
@@ -28,8 +27,8 @@ def step2_security_question():
     else:
         print("Wrong answer.\n")
         return False
-def step3_otp():
-    print("Step 3: One-Time Passcode (OTP)")
+def stm_otp():
+    print("One-Time Passcode (OTP)")
     otp = random.randint(1000, 9999)
     print(f"Your OTP is: {otp}")  # In real systems, this would be sent via email/SMS
     entered_otp = input("Enter the OTP: ")
@@ -45,14 +44,14 @@ def step3_otp():
 def security_interface():
     print("=== Secure Access Interface ===\n")
     
-    if not step1_login():
-        return print("Access Denied at Step 1.")
+    if not stm_login():
+        return print("Access Denied")
     
-    if not step2_security_question():
-        return print("Access Denied at Step 2.")
+    if not stm_security_question():
+        return print("Access Denied")
     
-    if not step3_otp():
-        return print("Access Denied at Step 3.")
+    if not stm_otp():
+        return print("Access Denied")
     
     print("✅ Access Granted. Welcome!")
 
