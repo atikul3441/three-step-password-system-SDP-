@@ -9,7 +9,7 @@ DB = "users.db"
 
 # -------------------- Database Connection --------------------
 def connect_db():
-    conn = sqlite3.connect(DB, timeout=10)  # Wait up to 10 seconds if locked
+    conn = sqlite3.connect(DB, timeout=30)  # Wait up to 10 seconds if locked
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -169,3 +169,4 @@ def security_interface():
 # -------------------- Run Program --------------------
 if __name__ == "__main__":
     security_interface()
+
