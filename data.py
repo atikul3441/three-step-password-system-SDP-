@@ -7,13 +7,11 @@ import time
 
 DB = "users.db"
 
-# -------------------- Database Connection --------------------
 def connect_db():
     conn = sqlite3.connect(DB, timeout=30)  # Wait up to 10 seconds if locked
     conn.row_factory = sqlite3.Row
     return conn
 
-# -------------------- Initialize Database --------------------
 def init_db():
     with connect_db() as conn:
         conn.execute("""
@@ -31,7 +29,6 @@ def init_db():
         """)
         conn.commit()
 
-# -------------------- Add Missing Columns --------------------
 def add_missing_columns():
     with connect_db() as conn:
         cur = conn.cursor()
@@ -47,7 +44,6 @@ def add_missing_columns():
                 except Exception as e:
                     print(f"❌ Failed to add '{col}':", e)
 
-# -------------------- Register New User --------------------
 def register_user():
     print("\n--- User Registration ---")
     first_name = input("First Name: ").strip()
@@ -84,7 +80,6 @@ def register_user():
     except Exception as e:
         print("An unexpected error occurred while registering:", e)
 
-# -------------------- User Login --------------------
 def login_user():
     print("\n--- Login ---")
     username = input("Username: ").strip()
@@ -102,7 +97,6 @@ def login_user():
             print("✅ Login successful!")
             return user
 
-# -------------------- Security Question --------------------
 def security_question(user):
     print("\nSecurity Question:")
     answer = input("What is your code word? ").strip().lower()
@@ -114,7 +108,6 @@ def security_question(user):
         print("❌ Wrong code word.")
         return False
 
-# -------------------- OTP Verification --------------------
 def otp_verification():
     otp = random.randint(1000, 9999)
     print(f"Your OTP is: {otp}")  # For demo only
@@ -126,7 +119,6 @@ def otp_verification():
         print("❌ Incorrect OTP.")
         return False
 
-# -------------------- Main Security Interface --------------------
 def security_interface():
     init_db()
     add_missing_columns()
@@ -166,7 +158,7 @@ def security_interface():
     except KeyboardInterrupt:
         print("\nInterrupted by user. Exiting...")
 
-# -------------------- Run Program --------------------
 if __name__ == "__main__":
     security_interface()
+
 
