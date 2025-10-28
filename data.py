@@ -147,7 +147,7 @@ def security_interface():
                     print("Access Denied.")
                     continue
 
-                print(f"\n🎉 Access Granted! Welcome {user['first_name']} {user['last_name']} (User ID: {user['id']})")
+                print(f"\n🎉 Access Granted! Welcome {user['first_name']} {user['last_name']}")
 
             elif choice == "3":
                 print("Goodbye!")
@@ -160,5 +160,6 @@ def security_interface():
 
 if __name__ == "__main__":
     security_interface()
+
 
 
