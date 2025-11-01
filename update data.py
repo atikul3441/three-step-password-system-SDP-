@@ -1,10 +1,10 @@
-
 import sqlite3
 import uuid
 import getpass
 import random
 import time
 from datetime import datetime
+import string
 
 DB = "users.db"
 
@@ -33,7 +33,6 @@ def init_db():
         conn.commit()
 
 # Add Missing Columns ---
-
 def add_missing_columns():
     with connect_db() as conn:
         cur = conn.cursor()
@@ -49,14 +48,36 @@ def add_missing_columns():
                 except Exception as e:
                     print(f"❌ Failed to add '{col}':", e)
 
-# Register New User 
+# OTP Verification ---
+def otp_verification(phone=None):
+    otp = random.randint(1000, 9999)
+    if phone:
+        print(f"\n📱 Sending OTP to {phone}...")
+    time.sleep(1)
+    print(f"Your OTP is: {otp}")
 
+    attempts = 0
+    while attempts < 3:
+        entered = input("Enter OTP: ").strip()
+        if entered == str(otp):
+            print("✅ OTP verified.")
+            return True
+        else:
+            attempts += 1
+            if attempts < 3:
+                print(f"❌ Incorrect OTP. Attempts left: {3 - attempts}")
+            else:
+                print("❌ Incorrect OTP. Maximum attempts reached.")
+                return False
+    return False
+
+# Register New User ---
 def register_user():
     print("\n--- User Registration ---")
     first_name = input("First Name: ").strip()
     last_name  = input("Last Name: ").strip()
 
-     # Date of Birth validation (dd/mm/yyyy) ---
+    # Date of Birth validation (dd/mm/yyyy) ---
     attempts = 0
     dob = ""
     current_year = 2025
@@ -65,11 +86,9 @@ def register_user():
         attempts += 1
 
         try:
-          
             parsed_date = datetime.strptime(dob, "%d/%m/%Y")
-
             day, month, year = parsed_date.day, parsed_date.month, parsed_date.year
-          
+
             if not (1 <= day <= 31):
                 print(f"Invalid day! Must be between 1 and 31. Attempts left: {3 - attempts}")
                 if attempts >= 3:
@@ -88,7 +107,7 @@ def register_user():
                     print("Maximum attempts reached. Registration cancelled.")
                     return
                 continue
-              
+
             break
         except ValueError:
             print(f"Invalid format! Please use dd/mm/yyyy. Attempts left: {3 - attempts}")
@@ -97,7 +116,7 @@ def register_user():
                 return
             continue
 
-     # phone number validation with retry ---
+    # Phone number validation with retry ---
     attempts = 0
     phone = ""
     while attempts < 3:
@@ -136,6 +155,10 @@ def register_user():
             continue
         break
 
+    if not otp_verification(phone):
+        print("❌ Registration cancelled due to failed OTP verification.")
+        return
+
     code_word  = input("Code Word (for recovery): ").strip()
     username   = input("Choose a Username: ").strip()
     password   = getpass.getpass("Choose a Password: ").strip()
@@ -144,7 +167,14 @@ def register_user():
         print("Username and password cannot be empty.")
         return
 
-    user_id = str(uuid.uuid4())
+    # Generate a unique user_id
+    with connect_db() as conn:
+        cur = conn.cursor()
+        while True:
+            user_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
+            cur.execute("SELECT 1 FROM users WHERE id=?", (user_id,))
+            if not cur.fetchone():
+                break
 
     try:
         with connect_db() as conn:
@@ -169,44 +199,46 @@ def register_user():
 # User Login ---
 def login_user():
     print("\n--- Login ---")
-    username = input("Username: ").strip()
-    password = getpass.getpass("Password: ").strip()
+    attempts = 0
+    while attempts < 3:
+        username = input("Username: ").strip()
+        password = getpass.getpass("Password: ").strip()
 
-    with connect_db() as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
-        user = cur.fetchone()
+        with connect_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+            user = cur.fetchone()
 
-        if not user:
-            print("❌ Incorrect username or password.")
-            return None
-        else:
-            print("✅ Login successful!")
-            return user
+            if not user:
+                attempts += 1
+                if attempts < 3:
+                    print(f"Invalid username or password. Attempts left: {3 - attempts}")
+                    continue
+                else:
+                    print("Invalid username or password.")
+                    return None
+            else:
+                print("✅ Login successful!")
+                return user
+    return None
 
-# Security Question ----
+# Security Question ---
 def security_question(user):
     print("\nSecurity Question:")
-    answer = input("What is your code word? ").strip().lower()
-    stored = (user["code_word"] or "").strip().lower()
-    if answer == stored:
-        print("✅ Security question passed.")
-        return True
-    else:
-        print("❌ Wrong code word.")
-        return False
-
-# OTP Verification ---
-def otp_verification():
-    otp = random.randint(1000, 9999)
-    print(f"Your OTP is: {otp}")  # For demo only
-    entered = input("Enter OTP: ").strip()
-    if entered == str(otp):
-        print("✅ OTP verified.")
-        return True
-    else:
-        print("❌ Incorrect OTP.")
-        return False
+    attempts = 0
+    while attempts < 3:
+        answer = input("What is your code word? ").strip().lower()
+        stored = (user["code_word"] or "").strip().lower()
+        if answer == stored:
+            print("✅ Security question passed.")
+            return True
+        else:
+            attempts += 1
+            if attempts < 3:
+                print(f"Wrong code word. Attempts left: {3 - attempts}")
+            else:
+                print("❌ Wrong code word.")
+                return False
 
 # Main Security Interface ---
 def security_interface():
@@ -230,10 +262,6 @@ def security_interface():
                     continue
 
                 if not security_question(user):
-                    print("Access Denied.")
-                    continue
-
-                if not otp_verification():
                     print("Access Denied.")
                     continue
 
