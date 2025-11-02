@@ -20,7 +20,7 @@ def init_db():
         conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
-            first_name TEXT,
+            first_name TE
             last_name TEXT,
             dob TEXT,
             phone TEXT,
@@ -271,14 +271,21 @@ def login_user():
 # Security Question ---
 def security_question(user):
     print("\nSecurity Question:")
-    for i in range(3):
+    attempts = 0
+    while attempts < 3:
         answer = input("What is your code word? ").strip().lower()
-        if answer == (user["code_word"] or "").lower():
+        stored = (user["code_word"] or "").strip().lower()
+        if answer == stored:
             print("✅ Security question passed.")
             return True
-        print("Wrong code word.")
-    return False
-
+        else:
+            attempts += 1
+            if attempts < 3:
+                print(f"Wrong code word. Attempts left: {3 - attempts}")
+            else:
+                print("❌ Wrong code word.")
+                return False
+            
 # Main Security Interface ---
 def security_interface():
     init_db()
