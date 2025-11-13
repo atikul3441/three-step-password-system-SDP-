@@ -1,6 +1,3 @@
-# Full GUI-wrapped version of your program using CustomTkinter + tkcalendar.
-# All backend logic (DB functions, passkey generation, typing profiling, step1 logic)
-# are preserved and used by the GUI. Only UI wrappers and bindings are added.
 
 import sqlite3
 import uuid
@@ -223,7 +220,7 @@ class TriSecureApp(ctk.CTk):
         self.container = ctk.CTkFrame(self)
         self.container.pack(fill="both", expand=True)
         self.frames = {}
-        for F in (HomePage, RegisterPage, LoginPage, Step1Page, WelcomePage):
+        for F in (HomePage, RegisterPage, LoginPage, SecurityPage, Step1Page, WelcomePage):
             page = F(parent=self.container, controller=self)
             self.frames[F.__name__] = page
             page.grid(row=0, column=0, sticky="nsew")
@@ -450,7 +447,7 @@ class LoginPage(ctk.CTkFrame):
                 conn.commit()
             messagebox.showinfo("Login Successful", f"Login successful. Typing profile recorded ({wpm} wpm).")
             # forward to security step1
-            self.controller.show_frame("Step1Page", user_row=user)
+            self.controller.show_frame("SecurityPage", user_row=user)
             return
 
         # Else compare wpm tolerance and check keystroke uniformity
@@ -458,7 +455,7 @@ class LoginPage(ctk.CTkFrame):
             stored_wpm_val = int(stored_wpm)
         except Exception:
             stored_wpm_val = int(stored_wpm) if stored_wpm else 0
-        tol = 10  # chosen tolerance (+-10 wpm)
+        tol = 25 
         if not (stored_wpm_val - tol <= wpm <= stored_wpm_val + tol):
             messagebox.showerror("Access Denied", f"Typing speed mismatch. Recorded: {stored_wpm_val} wpm, Now: {wpm} wpm.")
             return
@@ -476,8 +473,51 @@ class LoginPage(ctk.CTkFrame):
             return
 
         messagebox.showinfo("Login Successful", "Welcome user.")
-        # show Step1
-        self.controller.show_frame("Step1Page", user_row=user)
+        # go to SecurityPage
+        self.controller.show_frame("SecurityPage", user_row=user)
+        self.controller.frames["SecurityPage"].set_user(user)
+
+# ---------- Security Page (new, separated) ----------
+class SecurityPage(ctk.CTkFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.user_row = None
+        ctk.CTkLabel(self, text="🔐 Security Question", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(self, text="Enter your code word to continue").pack(pady=6)
+        self.code_entry = ctk.CTkEntry(self, placeholder_text="Your Code Word", show="*")
+        self.code_entry.pack(pady=8, ipadx=10, ipady=6)
+        self.msg = ctk.CTkLabel(self, text="")
+        self.msg.pack(pady=6)
+        btn_frame = ctk.CTkFrame(self)
+        btn_frame.pack(pady=12)
+        ctk.CTkButton(btn_frame, text="Verify", command=self.verify_codeword).grid(row=0, column=0, padx=8)
+        ctk.CTkButton(btn_frame, text="Back to Login", command=lambda: controller.show_frame("LoginPage")).grid(row=0, column=1, padx=8)
+
+    def set_user(self, user_row):
+        # user_row may be sqlite Row object; convert to dict minimally for safety
+        self.user_row = user_row
+        self.code_entry.delete(0, "end")
+        self.msg.configure(text="")
+
+    def verify_codeword(self):
+        if not self.user_row:
+            messagebox.showerror("Error", "No user loaded.")
+            self.controller.show_frame("LoginPage")
+            return
+        stored = (self.user_row["code_word"] or "").strip().lower()
+        answer = self.code_entry.get().strip().lower()
+        if answer == stored:
+            messagebox.showinfo("Success", "✅ Security question passed.")
+            # fetch fresh row from DB and forward to Step1
+            with connect_db() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM users WHERE username=?", (self.user_row["username"],))
+                updated = cur.fetchone()
+            self.controller.show_frame("Step1Page", user_row=updated)
+                   
+        else:
+            self.msg.configure(text="❌ Incorrect code word.")        
 
 # ---------- Step1 Page (Poker card) ----------
 class Step1Page(ctk.CTkFrame):
@@ -632,7 +672,7 @@ class Step1Page(ctk.CTkFrame):
         attempt_norm = [s.strip().lower() for s in self.current_selection]
         original_norm = [s.strip().lower() for s in seq_list[:7]]
         if attempt_norm == original_norm and entered_passkey == stored_passkey:
-            messagebox.showinfo("Success","user confirmed!")
+            messagebox.showinfo("✅Success","user confirmed!")
             # fetch updated user row and proceed
             with connect_db() as conn:
                 cur = conn.cursor()
